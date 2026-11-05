@@ -1,0 +1,22 @@
+# Build output
+target/
+*.class
+
+# Environment and secrets (CRITICAL: Never commit .env)
+.env
+.env.*
+!.env.example
+
+# Local runtime data
+data/
+uploads/
+*.log
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+

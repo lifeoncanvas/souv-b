@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -38,6 +40,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     ResponseEntity<Map<String, Object>> unreadable(Exception e) {
         return body(HttpStatus.BAD_REQUEST, "The request could not be read.", null);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<Map<String, Object>> missingParam(MissingServletRequestParameterException e) {
+        return body(HttpStatus.BAD_REQUEST, "Missing required parameter: " + e.getParameterName(), null);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<Map<String, Object>> wrongMethod(HttpRequestMethodNotSupportedException e) {
+        return body(HttpStatus.METHOD_NOT_ALLOWED, "Method " + e.getMethod() + " is not supported here.", null);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

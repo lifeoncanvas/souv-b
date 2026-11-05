@@ -30,13 +30,8 @@ public class NeonDataSourceEnvironment implements EnvironmentPostProcessor, Orde
 
         String raw = env.getProperty("DATABASE_URL", "").trim();
         if (raw.isEmpty()) {
-            throw new IllegalStateException("""
-
-                    No database configured. Set DATABASE_URL to your Neon connection string, e.g. in backend/.env:
-                      DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx.REGION.aws.neon.tech/neondb?sslmode=require
-                    (Neon console → your project → Connect.) To run offline on an embedded database instead,
-                    start with SPRING_PROFILES_ACTIVE=local.
-                    """);
+            useLocalFallback(env);
+            return;
         }
 
         Map<String, Object> props = new HashMap<>();
@@ -67,6 +62,35 @@ public class NeonDataSourceEnvironment implements EnvironmentPostProcessor, Orde
         if (pass != null && !pass.isBlank()) props.put("spring.datasource.password", pass);
 
         env.getPropertySources().addFirst(new MapPropertySource("neonDataSource", props));
+    }
+
+    /**
+     * No DATABASE_URL (a fresh clone without backend/.env): start on the embedded H2 file database with the
+     * same settings as the "local" profile, so the app runs out of the box with the seeded catalogue.
+     * Production must always set DATABASE_URL — this fallback is announced loudly in the log.
+     */
+    private static void useLocalFallback(ConfigurableEnvironment env) {
+        System.err.println("""
+
+                ************************************************************************************
+                 DATABASE_URL is not set, so the backend is starting on a LOCAL embedded database
+                 (backend/data/) with sample products. Fine for development; NEVER for production.
+                 To use the real Neon database, copy backend/.env.example to backend/.env and fill it in.
+                ************************************************************************************
+                """);
+        env.addActiveProfile("local");
+        Map<String, Object> props = new HashMap<>();
+        props.put("spring.datasource.driver-class-name", "org.h2.Driver");
+        props.put("spring.datasource.url",
+                "jdbc:h2:file:./data/licht;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH");
+        props.put("spring.datasource.username", "sa");
+        props.put("spring.datasource.password", "");
+        props.put("app.mail.log-bodies", "true");
+        if (env.getProperty("JWT_SECRET", "").isBlank()) {
+            // Accepted by JwtService only while the "local" profile is active.
+            props.put("app.jwt.secret", "local-profile-only-secret-licht-signature-souvenirs");
+        }
+        env.getPropertySources().addFirst(new MapPropertySource("localFallbackDataSource", props));
     }
 
     private static Map<String, String> parseQuery(String q) {
