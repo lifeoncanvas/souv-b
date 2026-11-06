@@ -56,20 +56,34 @@ Tests (in-memory H2 built from the same migrations):
 
 ## Deploy on a Linux server
 
-The API runs as a service behind nginx at `https://api.lichtsignaturesouvenirs.store`. The storefront (separate repo)
-is built with that address. Files are in `deploy/`.
+The whole site uses **one domain**:
 
-1. Point a DNS **A record** for `api.lichtsignaturesouvenirs.store` at the server.
-2. Install Java 21, nginx and certbot. On Ubuntu:
-   `sudo apt install openjdk-21-jre-headless nginx certbot python3-certbot-nginx`
-3. Build the jar (on the server or anywhere with JDK 21): `./mvnw -DskipTests package`, which produces
+| Address | Served by |
+| --- | --- |
+| `https://lichtsignaturesouvenirs.store` | the storefront (the `sov-frontend` repo's `dist/`) |
+| `https://lichtsignaturesouvenirs.store/api/...`, `/uploads/...`, `/sitemap.xml` | **this backend**, through nginx |
+
+The nginx config that does this lives in the storefront repo: `deploy/nginx-storefront.conf`. This repo only runs
+the backend as a service on the server, on port 8090.
+
+1. Install Java 21 (Ubuntu: `sudo apt install openjdk-21-jre-headless`).
+2. Build the jar on the server or anywhere with JDK 21: `./mvnw -DskipTests package`, which produces
    `target/licht-souvenirs-api-1.0.0.jar`.
+3. **Check port 8090 is free:** `sudo ss -ltnp | grep 8090`.
+   - If **another app** answers there, stop it or move it: it is not part of this site.
+   - Or run LICHT on another port: set `PORT=8091` in `api.env` and change `8090` in the storefront's nginx config.
 4. Install the service, following the steps at the top of `deploy/licht-api.service`. Fill in `/etc/licht/api.env`
    from `deploy/api.env.example`: the database URL, a new `JWT_SECRET`, the admin password, SMTP.
-5. Install the nginx site and HTTPS, following the steps at the top of `deploy/nginx-api.conf`. Always run
-   `sudo nginx -t` before reloading.
-6. Check: `curl https://api.lichtsignaturesouvenirs.store/api/categories` returns JSON.
+5. Check on the server: `curl http://localhost:8090/api/categories` lists **Wedding Souvenirs, Birthday Gifts…**.
    Logs: `journalctl -u licht-api -f`.
+6. Install the storefront's nginx config (see that repo's README), then check from anywhere:
+   `https://lichtsignaturesouvenirs.store/api/categories` shows the same souvenir categories.
+
+**If `/api` on the live site returns anything else** (for example testimony categories such as "Healing Streams"),
+nginx is still forwarding `/api` to a different app. Fix it with:
+- `grep -rn "proxy_pass\|server_name" /etc/nginx/sites-enabled/`. Exactly one site may have
+  `server_name lichtsignaturesouvenirs.store`, and its `/api/` must go to the LICHT backend's port.
+- `sudo nginx -t && sudo systemctl reload nginx`.
 
 **To update:** pull, rebuild the jar, copy it to `/opt/licht/api.jar`, then `sudo systemctl restart licht-api`.
 
