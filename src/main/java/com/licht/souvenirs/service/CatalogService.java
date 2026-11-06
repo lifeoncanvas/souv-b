@@ -20,6 +20,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import com.licht.souvenirs.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -43,6 +46,7 @@ public class CatalogService {
                                Boolean inStock, Boolean personalisable, String sort, int page, int size,
                                boolean includeInactive) {}
 
+    @Cacheable(cacheNames = CacheConfig.CATALOG, key = "'search:' + #query")
     @Transactional(readOnly = true)
     public PageResponse<ProductSummary> search(ProductQuery query) {
         Page<Product> page = products.findAll(spec(query),
@@ -147,11 +151,13 @@ public class CatalogService {
                 .map(mapper::summary).getContent();
     }
 
+    @Cacheable(cacheNames = CacheConfig.CATALOG, key = "'categories'")
     @Transactional(readOnly = true)
     public List<CategoryDto> categories() {
         return categories.findAllByOrderBySortOrderAscNameAsc().stream().map(mapper::category).toList();
     }
 
+    @Cacheable(cacheNames = CacheConfig.CATALOG, key = "'priceRange'")
     @Transactional(readOnly = true)
     public PriceRange priceRange() {
         BigDecimal min = products.minPrice();
@@ -161,6 +167,7 @@ public class CatalogService {
 
     // ---------- Admin ----------
 
+    @CacheEvict(cacheNames = CacheConfig.CATALOG, allEntries = true)
     @Transactional
     public ProductDetail save(Long id, ProductRequest r) {
         Product p = id == null ? new Product() : products.findById(id).orElseThrow(() -> ApiException.notFound("Product"));
@@ -220,6 +227,7 @@ public class CatalogService {
      * Removes a product from carts, wishlists and reviews, detaches it from past order lines
      * (which keep their name/price snapshot), then deletes it.
      */
+    @CacheEvict(cacheNames = CacheConfig.CATALOG, allEntries = true)
     @Transactional
     public void delete(Long id) {
         Product p = products.findById(id).orElseThrow(() -> ApiException.notFound("Product"));
@@ -230,6 +238,7 @@ public class CatalogService {
         products.delete(p);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATALOG, allEntries = true)
     @Transactional
     public CategoryDto saveCategory(Long id, CategoryRequest r) {
         Category c = id == null ? new Category() : categories.findById(id).orElseThrow(() -> ApiException.notFound("Category"));
@@ -246,6 +255,7 @@ public class CatalogService {
         return mapper.category(categories.save(c));
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATALOG, allEntries = true)
     @Transactional
     public void deleteCategory(Long id) {
         Category c = categories.findById(id).orElseThrow(() -> ApiException.notFound("Category"));

@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <!-- Shared IntelliJ run configuration: runs the API from the repository folder so backend/.env is found. -->
+  <configuration default="false" name="LichtApplication" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.licht.souvenirs.LichtApplication" />
+    <module name="licht-souvenirs-api" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

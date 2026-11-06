@@ -8,6 +8,9 @@ import com.licht.souvenirs.repo.Repositories.SiteContentRepository;
 import com.licht.souvenirs.web.ApiException;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
+import com.licht.souvenirs.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Admin-managed content blocks keyed by name (hero, about, contact, instagram...). */
@@ -23,6 +26,7 @@ public class ContentService {
         this.json = json;
     }
 
+    @Cacheable(cacheNames = CacheConfig.CONTENT, key = "'all'")
     @Transactional(readOnly = true)
     public ObjectNode all() {
         ObjectNode out = json.createObjectNode();
@@ -36,6 +40,7 @@ public class ContentService {
                 .orElseThrow(() -> ApiException.notFound("Content block"));
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CONTENT, allEntries = true)
     @Transactional
     public JsonNode put(String key, JsonNode value) {
         if (!KEY.matcher(key).matches()) throw ApiException.badRequest("Invalid content key.");
@@ -55,6 +60,7 @@ public class ContentService {
         return value;
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CONTENT, allEntries = true)
     @Transactional
     public void putIfAbsent(String key, String rawJson) {
         if (repo.findByKey(key).isEmpty()) repo.save(new SiteContent(key, rawJson));

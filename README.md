@@ -36,9 +36,49 @@ Tests (in-memory H2 built from the same migrations):
 ./mvnw test
 ```
 
+## Open in IntelliJ IDEA
+
+1. **File → Open** and choose **this repository's folder** (the one containing `pom.xml`), not a parent folder.
+   IntelliJ imports it as a Maven project.
+2. **File → Project Structure → Project → SDK**: choose a **JDK 21 or newer** (Download JDK… if none is listed).
+3. Optional: copy `.env.example` to `.env` and fill in the Neon values to use the shared database. Without it, the
+   app runs on a local sample database.
+4. Run the shared run configuration **LichtApplication** (top-right dropdown). It runs from this folder, so `.env`
+   is found. Wait for `Started LichtApplication`, then the API is at http://localhost:8090.
+
+**Troubleshooting**
+- `Port 8090 was already in use`: another copy of the backend is already running (another IntelliJ window or a
+  terminal). Stop it, or set `PORT=8091` in `.env`. Only one copy can run at a time.
+- `No database configured` / `.env` ignored: the run configuration's working directory isn't this folder. Use the
+  shared **LichtApplication** configuration, or set *Working directory* to `$PROJECT_DIR$`.
+- `release version 21 not supported` / `invalid target release`: the project SDK is older than Java 21 (step 2).
+- The storefront shows `ECONNREFUSED` in its terminal: the backend isn't running yet. Start it first.
+
+## Deploy on a Linux server
+
+The API runs as a service behind nginx at `https://api.lichtsignaturesouvenirs.store`. The storefront (separate repo)
+is built with that address. Files are in `deploy/`.
+
+1. Point a DNS **A record** for `api.lichtsignaturesouvenirs.store` at the server.
+2. Install Java 21, nginx and certbot. On Ubuntu:
+   `sudo apt install openjdk-21-jre-headless nginx certbot python3-certbot-nginx`
+3. Build the jar (on the server or anywhere with JDK 21): `./mvnw -DskipTests package`, which produces
+   `target/licht-souvenirs-api-1.0.0.jar`.
+4. Install the service, following the steps at the top of `deploy/licht-api.service`. Fill in `/etc/licht/api.env`
+   from `deploy/api.env.example`: the database URL, a new `JWT_SECRET`, the admin password, SMTP.
+5. Install the nginx site and HTTPS, following the steps at the top of `deploy/nginx-api.conf`. Always run
+   `sudo nginx -t` before reloading.
+6. Check: `curl https://api.lichtsignaturesouvenirs.store/api/categories` returns JSON.
+   Logs: `journalctl -u licht-api -f`.
+
+**To update:** pull, rebuild the jar, copy it to `/opt/licht/api.jar`, then `sudo systemctl restart licht-api`.
+
+The service runs with `SPRING_PROFILES_ACTIVE=prod`. In that mode the API **refuses to start** without
+`DATABASE_URL`, rather than quietly using an empty local database.
+
 ## Production configuration (environment variables)
 
-**Always set `DATABASE_URL` in production**; otherwise the API runs on an empty local database.
+**Always set `DATABASE_URL` and `SPRING_PROFILES_ACTIVE=prod` in production.**
 
 | Variable | Purpose |
 | --- | --- |

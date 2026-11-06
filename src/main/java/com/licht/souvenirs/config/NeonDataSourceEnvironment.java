@@ -30,6 +30,15 @@ public class NeonDataSourceEnvironment implements EnvironmentPostProcessor, Orde
 
         String raw = env.getProperty("DATABASE_URL", "").trim();
         if (raw.isEmpty()) {
+            if (Arrays.asList(env.getActiveProfiles()).contains("prod")) {
+                // A live server must never quietly start on an empty local database.
+                throw new IllegalStateException("""
+
+                        No database configured. The "prod" profile is active, so DATABASE_URL must be set, e.g. in
+                        the server's environment file (see deploy/api.env.example):
+                          DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx.REGION.aws.neon.tech/neondb?sslmode=require
+                        """);
+            }
             useLocalFallback(env);
             return;
         }

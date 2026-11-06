@@ -1,0 +1,31 @@
+# systemd service for the LICHT Signature Souvenirs API.
+#
+# Install (as root):
+#   useradd --system --home /opt/licht --shell /usr/sbin/nologin licht
+#   mkdir -p /opt/licht /var/lib/licht/uploads /etc/licht
+#   cp target/licht-souvenirs-api-1.0.0.jar /opt/licht/api.jar
+#   cp deploy/api.env.example /etc/licht/api.env    # then edit it and fill in the real values
+#   chown -R licht:licht /opt/licht /var/lib/licht
+#   chmod 600 /etc/licht/api.env
+#   cp deploy/licht-api.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now licht-api
+#   journalctl -u licht-api -f                      # follow the log
+
+[Unit]
+Description=LICHT Signature Souvenirs API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=licht
+Group=licht
+WorkingDirectory=/opt/licht
+EnvironmentFile=/etc/licht/api.env
+Environment=SPRING_PROFILES_ACTIVE=prod
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/licht/api.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
