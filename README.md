@@ -1,7 +1,7 @@
 # LICHT Signature Souvenirs — API
 
 Spring Boot 3.5 (Java 21) REST API with Spring Security + JWT, Spring Data JPA and Flyway, on
-[Neon](https://neon.tech) serverless PostgreSQL. The storefront (separate repository, `souvenirs-frontend`)
+[Neon](https://neon.tech) serverless PostgreSQL. The storefront (separate repository, [lifeoncanvas/sov-frontend](https://github.com/lifeoncanvas/sov-frontend))
 calls it at `/api`.
 
 ## Run locally
