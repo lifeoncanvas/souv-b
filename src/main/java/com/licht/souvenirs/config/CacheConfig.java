@@ -53,8 +53,13 @@ public class CacheConfig {
         return manager;
     }
 
+    /**
+     * Runs after start-up tasks such as seeding a new database. Anything cached before then (a request that arrived
+     * mid-seed) may be empty, so start from a clean cache.
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void warmOnStartup() {
+        clearAll();
         warm();
     }
 
@@ -69,12 +74,16 @@ public class CacheConfig {
 
     @Scheduled(fixedRate = 60_000, initialDelay = 60_000)
     public void refresh() {
+        clearAll();
+        // Re-load only while there is traffic: otherwise the database is left alone so Neon can suspend it.
+        if (System.currentTimeMillis() - lastRequestAt < KEEP_WARM_MS) warm();
+    }
+
+    private void clearAll() {
         manager.getCacheNames().forEach(name -> {
             var cache = manager.getCache(name);
             if (cache != null) cache.clear();
         });
-        // Re-load only while there is traffic: otherwise the database is left alone so Neon can suspend it.
-        if (System.currentTimeMillis() - lastRequestAt < KEEP_WARM_MS) warm();
     }
 
     /** Loads what the home and shop pages ask for first (the same query the storefront sends). */
